@@ -6,8 +6,8 @@ REF <- read.xlsx('TablesForSTCRGS.xlsx', sheet = 'REF', rowNames = TRUE)
 RGSrg <- read.xlsx('TablesForSTCRGS.xlsx', sheet = 'RGSrg')
 RGSCo <- read.xlsx('TablesForSTCRGS.xlsx', sheet = 'RGScounty')
 CityXwalk <- read.csv('Juris_Reporting.csv', header = TRUE)
-CityData_emp <- read.xlsx('CityData_Emp.xlsx', sheet = 'CityDataEmp')
-CityData_pop <- read.xlsx('CityData_Pop.xlsx', sheet = 'CityDataPop')
+CityData_emp <- read.xlsx('CityDataEmp.xlsx', sheet = 'CityDataEmp')
+CityData_pop <- read.xlsx('CityDataPop.xlsx', sheet = 'CityDataPop')
 
 #create + populate table to hold growth 2000-50, etc.
 #Be aware that 2016 values are 2017 for pop and households, etc
@@ -36,9 +36,9 @@ RGS2000_50 <- sqldf(' select County, RG, RGSPop * Pop as PopGro, RGSEmp * Emp as
                     join CoGrowth2000_50 using (County)')
 
 #check that RG growth 2000-16 is less than 2000-50, and flag if not
-RGS2000_16 <- sqldf(' select CityData_pop.County, CityData_pop.RG as RG, sum(CityData_pop.`2016est`- CityData_pop.`2000est`) as Pop0016, sum(CityData_emp.`2016est`- CityData_emp.`2000est`) as Emp0016
+RGS2000_16 <- sqldf(' select CityData_pop.County, CityData_pop.RGID_Existing as RG, sum(CityData_pop.`2016est`- CityData_pop.`2000est`) as Pop0016, sum(CityData_emp.`2016est`- CityData_emp.`2000est`) as Emp0016
                     from CityData_pop join CityData_emp using (CityID)
-                    group by CityData_pop.County, CityData_pop.RG')
+                    group by CityData_pop.County, CityData_pop.RGID_Existing')
 
 CheckGrowth <- merge(RGS2000_16, RGS2000_50, by = c("County", "RG"))
 CheckGrowth$Pop1650 <- CheckGrowth$PopGro - CheckGrowth$Pop0016

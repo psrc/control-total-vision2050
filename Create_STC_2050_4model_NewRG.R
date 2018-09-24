@@ -6,8 +6,8 @@ REF <- read.xlsx('TablesForSTCRGS.xlsx', sheet = 'REF', rowNames = TRUE)
 RGSrg <- read.xlsx('TablesForSTCRGS.xlsx', sheet = 'RGSrg')
 RGSCo <- read.xlsx('TablesForSTCRGS.xlsx', sheet = 'RGScounty')
 CityXwalk <- read.csv('Juris_Reporting.csv', header = TRUE)
-CityData_emp <- read.xlsx('CityData_Emp.xlsx', sheet = 'CityDataEmp')
-CityData_pop <- read.xlsx('CityData_Pop.xlsx', sheet = 'CityDataPop')
+CityData_emp <- read.xlsx('CityDataEmp.xlsx', sheet = 'CityDataEmp')
+CityData_pop <- read.xlsx('CityDataPop.xlsx', sheet = 'CityDataPop')
 
 #create + populate table to hold growth 2000-50, etc.
 #Be aware that 2016 values are 2017 for pop and households, etc
@@ -36,9 +36,9 @@ RGS2000_50 <- sqldf(' select County, RG, RGSPop * Pop as PopGro, RGSEmp * Emp as
                     join CoGrowth2000_50 using (County)')
 
 #check that RG growth 2000-16 is less than 2000-50, and flag if not
-RGS2000_16 <- sqldf(' select CityData_pop.County, CityData_pop.RG as RG, sum(CityData_pop.`2016est`- CityData_pop.`2000est`) as Pop0016, sum(CityData_emp.`2016est`- CityData_emp.`2000est`) as Emp0016
+RGS2000_16 <- sqldf(' select CityData_pop.County, CityData_pop.RGID_Proposed as RG, sum(CityData_pop.`2016est`- CityData_pop.`2000est`) as Pop0016, sum(CityData_emp.`2016est`- CityData_emp.`2000est`) as Emp0016
                     from CityData_pop join CityData_emp using (CityID)
-                    group by CityData_pop.County, CityData_pop.RG')
+                    group by CityData_pop.County, CityData_pop.RGID_Proposed')
 
 CheckGrowth <- merge(RGS2000_16, RGS2000_50, by = c("County", "RG"))
 CheckGrowth$Pop1650 <- CheckGrowth$PopGro - CheckGrowth$Pop0016
@@ -60,28 +60,32 @@ RGS2016_50 <- sqldf(' select RGS2000_50.County, RGS2000_50.RG, (PopGro - Pop0016
                     join RGS2000_16 using (County, RG)')
 
 #create job target Ratios
-CityData_emp$CoRGid <- paste(CityData_emp$County, CityData_emp$RG, sep = '_')
-RGTargetTots <- sqldf(' select County, RG, sum(Target + Annex + CR_add) as RGTarget 
-                      from CityData_emp group by County, RG')
-RGTargetTots$CoRGid <- paste(RGTargetTots$County, RGTargetTots$RG, sep = '_')
+CityData_emp$CoRGid <- paste(CityData_emp$County, CityData_emp$RGID_Proposed, sep = '_')
+RGTargetTots <- sqldf(' select County, RGID_Proposed, sum(Target + Annex + CR_add) as RGTarget 
+                      from CityData_emp group by County, RGID_Proposed')
+RGTargetTots$CoRGid <- paste(RGTargetTots$County, RGTargetTots$RGID_Proposed, sep = '_')
 CityData_emp$RG_Target <- (CityData_emp$Target + CityData_emp$Annex + CityData_emp$CR_add)/sqldf(' select RGTarget from RGTargetTots join CityData_emp using (CoRGid)')
-colnames(CityData_emp[,11]) <- "RG_Target"
+colnames(CityData_emp[,12]) <- "RG_Target"
 
 #create pop target Ratios
-CityData_pop$CoRGid <- paste(CityData_pop$County, CityData_pop$RG, sep = '_')
-RGTargetTotsPOP <- sqldf(' select County, RG, sum(Target + Annex) as RGTarget 
-                      from CityData_pop group by County, RG')
-RGTargetTotsPOP$CoRGid <- paste(RGTargetTotsPOP$County, RGTargetTotsPOP$RG, sep = '_')
+CityData_pop$CoRGid <- paste(CityData_pop$County, CityData_pop$RGID_Proposed, sep = '_')
+RGTargetTotsPOP <- sqldf(' select County, RGID_Proposed, sum(Target + Annex) as RGTarget 
+                      from CityData_pop group by County, RGID_Proposed')
+RGTargetTotsPOP$CoRGid <- paste(RGTargetTotsPOP$County, RGTargetTotsPOP$RGID_Proposed, sep = '_')
 CityData_pop$RG_Target <- (CityData_pop$Target + CityData_pop$Annex)/sqldf(' select RGTarget from RGTargetTotsPOP join CityData_pop using (CoRGid)')
-colnames(CityData_pop[,10]) <- "RG_Target"
+colnames(CityData_pop[,11]) <- "RG_Target"
 
 #Apply Target_RG ratios to 2017-50 RG totals
-City1650groEmp <- sqldf(' select CityData_emp.RG, CityData_emp.County, CityData_emp.CityID,`2000est`, `2016est`as Emp2016, RG_Target * Emp1650 as EmpGro1650 
+City1650groEmp <- sqldf(' select CityData_emp.RGID_Proposed, CityData_emp.County, CityData_emp.CityID,`2000est`, `2016est`as Emp2016, RG_Target * Emp1650 as EmpGro1650 
                         from CityData_emp 
-                        join RGS2016_50 using (County, RG) ')
-City1650groPop <- sqldf(' select CityData_pop.RG, CityData_pop.County, CityData_pop.CityID, `2000est`as Pop2000, HHpop00, `2016est`as Pop2016, HHPop16, RG_Target * Pop1650 as PopGro1650, (RG_Target * Pop1650) * (1-GQpct) as HHPopGro1650 
+                        join RGS2016_50 
+                        on CityData_emp.County = RGS2016_50.County
+                        and CityData_emp.RGID_Proposed = RGS2016_50.RG ')
+City1650groPop <- sqldf(' select CityData_pop.RGID_Proposed, CityData_pop.County, CityData_pop.CityID, `2000est`as Pop2000, HHpop00, `2016est`as Pop2016, HHPop16, RG_Target * Pop1650 as PopGro1650, (RG_Target * Pop1650) * (1-GQpct) as HHPopGro1650 
                         from CityData_pop 
-                        join RGS2016_50 using (County, RG) ')
+                        join RGS2016_50
+                        on CityData_pop.County = RGS2016_50.County
+                        and CityData_pop.RGID_Proposed = RGS2016_50.RG ')
 
 #Sum for City 2050 totals
 City1650groEmp$Emp2050 <- sqldf(' select EmpGro1650  + "2016est" as Emp2050 from City1650groEmp join CityData_emp using (CityID)')
@@ -119,7 +123,7 @@ City1650groPop$HHPop0050 <- City1650groPop$HHPop2050 - City1650groPop$HHPop00
 # City1650groPop$HHPop2050 <- HPopCtrlMx$CtrlHHPop
 
 #Create HH
-City1650groHH <- sqldf(' select CityData_pop.RG, CityData_pop.County, CityData_pop.CityID, HH2000, HH2016, PPH, HHPopGro1650 / PPH as HHGro1650 
+City1650groHH <- sqldf(' select CityData_pop.RGID_Proposed, CityData_pop.County, CityData_pop.CityID, HH2000, HH2016, PPH, HHPopGro1650 / PPH as HHGro1650 
                         from CityData_pop 
                        join City1650groPop using (CityID) ')
 
@@ -140,25 +144,25 @@ City1650groHH$HH2050 <- City1650groHH$HHGro1650 + City1650groHH$HH2016
 City1650groHH$HH0050 <- City1650groHH$HH2050 - City1650groHH$HH2000
 
 #Add juris names
-CityRGSEmp <- sqldf('select City1650groEmp.RG, City1650groEmp.County, City1650groEmp.CityID, Juris, `2000est` as Emp2000, Emp2016 ,Empgro1650, Emp2050 
+CityRGSEmp <- sqldf('select City1650groEmp.RGID_Proposed, City1650groEmp.County, City1650groEmp.CityID, Juris, `2000est` as Emp2000, Emp2016 ,Empgro1650, Emp2050 
                     from City1650groEmp 
                     join CityXwalk using (CityID)')
-CityRGSPop <- sqldf('select City1650groPop.RG, City1650groPop.County, City1650groPop.CityID, Juris, Pop2000, Pop2016, Popgro1650, Pop2050, HHPop00, HHPop16, HHPopGro1650, HHPop2050 
+CityRGSPop <- sqldf('select City1650groPop.RGID_Proposed, City1650groPop.County, City1650groPop.CityID, Juris, Pop2000, Pop2016, Popgro1650, Pop2050, HHPop00, HHPop16, HHPopGro1650, HHPop2050 
                     from City1650groPop 
                     join CityXwalk using (CityID)')
-CityRGSHH <- sqldf('select City1650groHH.RG, City1650groHH.County, City1650groHH.CityID, Juris, HH2000, HH2016, HHgro1650, HH2050 
+CityRGSHH <- sqldf('select City1650groHH.RGID_Proposed, City1650groHH.County, City1650groHH.CityID, Juris, HH2000, HH2016, HHgro1650, HH2050 
                     from City1650groHH 
                     join CityXwalk using (CityID)')
 
 
 #Sum RGS
-RGS50 <- sqldf(' select CityRGSPop.County, CityRGSPop.RG, sum(Pop2050 - Pop2000) as Pop0050, sum("Pop2050") as Pop50, sum(HH2050 - HH2000) as HH0050, sum(HH2050) as HH50, sum(Emp2050 - Emp2000) as Emp0050, sum("Emp2050") as Emp50 
+RGS50 <- sqldf(' select CityRGSPop.County, CityRGSPop.RGID_Proposed, sum(Pop2050 - Pop2000) as Pop0050, sum("Pop2050") as Pop50, sum(HH2050 - HH2000) as HH0050, sum(HH2050) as HH50, sum(Emp2050 - Emp2000) as Emp0050, sum("Emp2050") as Emp50 
                from CityRGSPop 
                join CityRGSEmp using (CityID) join CityRGSHH using (CityID) 
-               group by CityRGSPop.County, CityRGSPop.RG ')
+               group by CityRGSPop.County, CityRGSPop.RGID_Proposed ')
 
 #Export outta here
 output <- list("RGS2050" = RGS50, "CityPop0050" = CityRGSPop, "CityHH0050" = CityRGSHH,  "CityEmp0050" = CityRGSEmp)
-  write.xlsx(output, "RGS2050_STC_modInput_QC180829.xlsx", colNames = TRUE)
+  write.xlsx(output, "RGS2050_STC_modInput_QC180829_newRG.xlsx", colNames = TRUE)
   # write.xlsx(output, "Y:/VISION 2050/Data/2050_RGS/STC_final/RGS2050_STC_modInput.xlsx", colNames = TRUE)
   
