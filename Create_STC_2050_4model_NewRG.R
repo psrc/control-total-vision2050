@@ -218,6 +218,16 @@ colnames(RGS50)[which(colnames(RGS50) == "RGID")] <- RGcol
 
 #Export outta here
 output <- list("RGS2050" = RGS50, "CityPop0050" = CityRGSPop, "CityHH0050" = CityRGSHH,  "CityEmp0050" = CityRGSEmp)
-  write.xlsx(output, "RGS2050_STC_modInput_QC180829_newRG.xlsx", colNames = TRUE)
-  # write.xlsx(output, "Y:/VISION 2050/Data/2050_RGS/STC_final/RGS2050_STC_modInput.xlsx", colNames = TRUE)
+write.xlsx(output, "RGS2050_STC_modInput_QC180829_newRG.xlsx", colNames = TRUE)
+# write.xlsx(output, "Y:/VISION 2050/Data/2050_RGS/STC_final/RGS2050_STC_modInput.xlsx", colNames = TRUE)
+  
+# Interpolate (this could go into a separate R script)
+source("interpolate.R")
+to.interpolate <- list(HH = CityRGSHH, Emp = CityRGSEmp)
+CTs <- list()
+for (indicator in names(to.interpolate)) 
+    CTs[[indicator]] <- interpolate.controls(to.interpolate[[indicator]], indicator)
+
+write.xlsx(CTs, paste0("CTs_", Sys.Date(), ".xlsx"), colNames = TRUE)
+
   
