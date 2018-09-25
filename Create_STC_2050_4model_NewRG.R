@@ -1,14 +1,31 @@
-dir <- 'J:/Projects/V2050/STC_RGS/Script'
-dir <- '/Volumes/DataTeam/Projects/V2050/STC_RGS/Script'
-setwd(dir)
-#create table with adopted targets/annexed bits county, cityID, RG 
 library(openxlsx)
-REF <- read.xlsx('TablesForSTCRGS.xlsx', sheet = 'REF', rowNames = TRUE)
-RGSrg <- read.xlsx('TablesForSTCRGS.xlsx', sheet = 'RGSrg')
-RGSCo <- read.xlsx('TablesForSTCRGS.xlsx', sheet = 'RGScounty')
-CityXwalk <- read.csv('Juris_Reporting.csv', header = TRUE)
-CityData_emp <- read.xlsx('CityDataEmp.xlsx', sheet = 'CityDataEmp')
-CityData_pop <- read.xlsx('CityDataPop.xlsx', sheet = 'CityDataPop')
+library(sqldf)
+
+# Where is this script
+#script.dir <- 'J:/Projects/V2050/STC_RGS/Script'
+script.dir <- '/Volumes/DataTeam/Projects/V2050/STC_RGS/Script' # for Hana
+script.dir <- '/Users/hana/psrc/R/control-total-vision2050' # for Hana
+
+# Where do the data tables live
+data.dir <- script.dir
+data.dir <- file.path(script.dir, "data") # for Hana
+
+# Where does the Juris_Reporting file live
+juris.dir <- "J:/Projects/V2050/SEIS/Data_Support/script_input"
+juris.dir <- data.dir # for Hana
+
+setwd(script.dir)
+
+#create table with adopted targets/annexed bits county, cityID, RG 
+REF <- read.xlsx(file.path(data.dir, 'TablesForSTCRGS.xlsx'), sheet = 'REF', 
+                 rowNames = TRUE, rows = 1:8)
+RGSrg <- read.xlsx(file.path(data.dir, 'TablesForSTCRGS.xlsx'), sheet = 'RGSrg', cols = 1:4)
+RGSCo <- read.xlsx(file.path(data.dir, 'TablesForSTCRGS.xlsx'), sheet = 'RGScounty', rows = 1:5)
+CityXwalk <- read.csv(file.path(juris.dir, 'Juris_Reporting.csv'), header = TRUE)
+CityData_emp <- read.xlsx(file.path(data.dir, 'CityDataEmp.xlsx'), sheet = 'CityDataEmp',
+                          rows = 1:158)
+CityData_pop <- read.xlsx(file.path(data.dir, 'CityDataPop.xlsx'), sheet = 'CityDataPop',
+                          rows = 1:158)
 
 #create + populate table to hold growth 2000-50, etc.
 #Be aware that 2016 values are 2017 for pop and households, etc
@@ -27,11 +44,11 @@ REFdelta['2000-35',] <- REF['2035',] - REF['2000',]
 #apportion growth to counties
 CoGrowth2000_50 <- RGSCo
 colnames(CoGrowth2000_50) <- c('County', 'Pop', 'Emp')
-CoGrowth2000_50$Pop <- REFdelta[2,1]*RGSCo$RGSPop
-CoGrowth2000_50$Emp <- REFdelta[2,4]*RGSCo$RGSEmp
+CoGrowth2000_50$Pop <- REFdelta["2000-50", "Pop"]*RGSCo$RGSPop
+CoGrowth2000_50$Emp <- REFdelta["2000-50", "Emp"]*RGSCo$RGSEmp
 
 #setup 00-50 growth (RG x Co) to apply RG ratios to
-library(sqldf)
+
 RGS2000_50 <- sqldf(' select County, RG, RGSPop * Pop as PopGro, RGSEmp * Emp as EmpGro 
                     from RGSrg 
                     join CoGrowth2000_50 using (County)')
@@ -47,7 +64,6 @@ CheckGrowth$Emp1650 <- CheckGrowth$EmpGro - CheckGrowth$Emp0016
 CheckGrowth$ChkPop <- ifelse(CheckGrowth$PopGro < CheckGrowth$Pop0016, "NO", "ok")
 CheckGrowth$ChkEmp <- ifelse(CheckGrowth$EmpGro < CheckGrowth$Emp0016, "NO", "ok")
 
-RGS2000_50 <- merge(RGS2000_50, CheckGrowth[, c("County", "RG", "Pop1650", "Emp1650")]
 #Adjust 2000-50 growth where 2000-16/17 growth is higher
 for(ind in c("Pop", "Emp")) {
   AdjDF <- NULL
@@ -65,23 +81,15 @@ for(ind in c("Pop", "Emp")) {
     Adj2000_50$Share <- Adj2000_50$Share/sum(Adj2000_50$Share) # rescale to 1
     Adj2000_50$AdjGro <- - sum(checkdf[[delcol]][irow]) * Adj2000_50$Share
     Adj2000_50$AdjGro[adjrow] <- Adj2000_50[[delcol]][adjrow]
-    Adj2000_50[[delcol]] <- Adj2000_50[[delcol]] - Adj2000_50$AdjGro
     AdjDF <- rbind(AdjDF, Adj2000_50)
   }
   if(!is.null(AdjDF)) {
-    
     RGS2000_50 <- merge(RGS2000_50, AdjDF[, c("County", "RG", "AdjGro")], all = TRUE)
+    RGS2000_50[is.na(RGS2000_50$AdjGro), "AdjGro"] <- 0
+    RGS2000_50[[grocol]] <- RGS2000_50[[grocol]] -  RGS2000_50$AdjGro
+    RGS2000_50$AdjGro <- NULL
+  }
 }
-
-
-
-Adj2000_50 <- sqldf(' select RGS2000_50.County, RGS2000_50.RG, RGS2000_50.PopGro, Pop1650, ChkPop from RGS2000_50 
-            join CheckGrowth using (County) where ChkPop = "NO" ')
-Adj2000_50$CoSum <- (sum(Adj2000_50$PopGro)) - Adj2000_50[5,3]
-Adj2000_50$Share <- Adj2000_50$PopGro / Adj2000_50$CoSum
-Adj2000_50[5,7] <- -1
-Adj2000_50$AdjGro <- (Adj2000_50$Pop1650 * Adj2000_50$Share) * -1
-RGS2000_50[1:6,3] <- sqldf('select (RGS2000_50.PopGro - AdjGro) from RGS2000_50 join Adj2000_50 using (County, RG) ')
 
 #Subtract out 2000-16/17 growth 
 RGS2016_50 <- sqldf(' select RGS2000_50.County, RGS2000_50.RG, (PopGro - Pop0016) as Pop1650, (EmpGro - Emp0016) as Emp1650 from RGS2000_50
