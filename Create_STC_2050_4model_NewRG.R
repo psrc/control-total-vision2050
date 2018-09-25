@@ -1,4 +1,5 @@
 dir <- 'J:/Projects/V2050/STC_RGS/Script'
+dir <- '/Volumes/DataTeam/Projects/V2050/STC_RGS/Script'
 setwd(dir)
 #create table with adopted targets/annexed bits county, cityID, RG 
 library(openxlsx)
@@ -15,13 +16,13 @@ REFdelta <- REF
 REFdelta[] <- NA
 rownames(REFdelta) <- c('2000-16', '2000-50', '2040-50', '2016-50', '2000-30', '2000-31', '2000-35')
 #REFdelta <- REFdelta[-c(4:7),]
-REFdelta[1,] <- REF[2,] - REF[1,]
-REFdelta[2,] <- REF[7,] - REF[1,]
-REFdelta[3,] <- REF[7,] - REF[6,]
-REFdelta[4,] <- REF[7,] - REF[2,]
-REFdelta[5,] <- REF[3,] - REF[1,]
-REFdelta[6,] <- REF[4,] - REF[1,]
-REFdelta[7,] <- REF[5,] - REF[1,]
+REFdelta['2000-16',] <- REF['2016',] - REF['2000',]
+REFdelta['2000-50',] <- REF['2050',] - REF['2000',]
+REFdelta['2040-50',] <- REF['2050',] - REF['2040',]
+REFdelta['2016-50',] <- REF['2050',] - REF['2016',]
+REFdelta['2000-30',] <- REF['2030',] - REF['2000',]
+REFdelta['2000-31',] <- REF['2031',] - REF['2000',]
+REFdelta['2000-35',] <- REF['2035',] - REF['2000',]
 
 #apportion growth to counties
 CoGrowth2000_50 <- RGSCo
@@ -46,7 +47,34 @@ CheckGrowth$Emp1650 <- CheckGrowth$EmpGro - CheckGrowth$Emp0016
 CheckGrowth$ChkPop <- ifelse(CheckGrowth$PopGro < CheckGrowth$Pop0016, "NO", "ok")
 CheckGrowth$ChkEmp <- ifelse(CheckGrowth$EmpGro < CheckGrowth$Emp0016, "NO", "ok")
 
-#Adjust 2000-50 growth where 2000-16/17 growth is higher (this is hard coded for King Co UU Pop only)
+RGS2000_50 <- merge(RGS2000_50, CheckGrowth[, c("County", "RG", "Pop1650", "Emp1650")]
+#Adjust 2000-50 growth where 2000-16/17 growth is higher
+for(ind in c("Pop", "Emp")) {
+  AdjDF <- NULL
+  chkcol <- paste0("Chk", ind)
+  grocol <- paste0(ind, "Gro")
+  delcol <- paste0(ind, "1650")
+  for(cnty in unique(CheckGrowth[CheckGrowth[[chkcol]] == "NO", "County"])) {
+    checkdf <- subset(CheckGrowth, County == cnty)
+    irow <- which(checkdf[[chkcol]] == "NO")
+    Adj2000_50 <- subset(RGS2000_50, County == cnty)
+    Adj2000_50 <- merge(Adj2000_50, checkdf[, c("County", "RG", delcol)])
+    adjrow <- which(Adj2000_50[[delcol]] < 0) 
+    Adj2000_50$Share <- Adj2000_50[[grocol]] / sum(Adj2000_50[[grocol]])
+    Adj2000_50$Share[adjrow] <- 0
+    Adj2000_50$Share <- Adj2000_50$Share/sum(Adj2000_50$Share) # rescale to 1
+    Adj2000_50$AdjGro <- - sum(checkdf[[delcol]][irow]) * Adj2000_50$Share
+    Adj2000_50$AdjGro[adjrow] <- Adj2000_50[[delcol]][adjrow]
+    Adj2000_50[[delcol]] <- Adj2000_50[[delcol]] - Adj2000_50$AdjGro
+    AdjDF <- rbind(AdjDF, Adj2000_50)
+  }
+  if(!is.null(AdjDF)) {
+    
+    RGS2000_50 <- merge(RGS2000_50, AdjDF[, c("County", "RG", "AdjGro")], all = TRUE)
+}
+
+
+
 Adj2000_50 <- sqldf(' select RGS2000_50.County, RGS2000_50.RG, RGS2000_50.PopGro, Pop1650, ChkPop from RGS2000_50 
             join CheckGrowth using (County) where ChkPop = "NO" ')
 Adj2000_50$CoSum <- (sum(Adj2000_50$PopGro)) - Adj2000_50[5,3]
