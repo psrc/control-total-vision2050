@@ -1,6 +1,3 @@
-library(openxlsx)
-library(sqldf)
-
 # Where is this script
 script.dir <- 'J:/Projects/V2050/STC_RGS/Script'
 #script.dir <- '/Volumes/DataTeam/Projects/V2050/STC_RGS/Script' # for Hana
