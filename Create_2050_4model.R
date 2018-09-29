@@ -45,60 +45,66 @@ colnames(CoGrowth2000_50) <- c('County', 'Pop', 'Emp')
 CoGrowth2000_50$Pop <- REFdelta["2000-50", "Pop"]*RGSCo$RGSPop
 CoGrowth2000_50$Emp <- REFdelta["2000-50", "Emp"]*RGSCo$RGSEmp
 
+CoGrowth2016_50 <- RGSCo
+colnames(CoGrowth2016_50) <- c('County', 'Pop', 'Emp')
+CoGrowth2016_50$Pop <- REFdelta["2016-50", "Pop"]*RGSCo$RGSPop
+CoGrowth2016_50$Emp <- REFdelta["2016-50", "Emp"]*RGSCo$RGSEmp
+
+
 #setup 00-50 growth (RG x Co) to apply RG ratios to
 
-RGS2000_50 <- sqldf(' select County, RG, RGSPop * Pop as PopGro, RGSEmp * Emp as EmpGro 
-                    from RGSrg 
-                    join CoGrowth2000_50 using (County)')
-
-#check that RG growth 2000-16 is less than 2000-50, and flag if not
-RGS2000_16 <- sqldf(' select CityData_pop.County, CityData_pop.RGID as RG, sum(CityData_pop.`2016est`- CityData_pop.`2000est`) as Pop0016, sum(CityData_emp.`2016est`- CityData_emp.`2000est`) as Emp0016
-                    from CityData_pop join CityData_emp using (CityID)
-                    group by CityData_pop.County, CityData_pop.RGID')
-
-CheckGrowth <- merge(RGS2000_16, RGS2000_50, by = c("County", "RG"))
-CheckGrowth$Pop1650 <- CheckGrowth$PopGro - CheckGrowth$Pop0016
-CheckGrowth$Emp1650 <- CheckGrowth$EmpGro - CheckGrowth$Emp0016
-CheckGrowth$ChkPop <- ifelse(CheckGrowth$PopGro < CheckGrowth$Pop0016, "NO", "ok")
-CheckGrowth$ChkEmp <- ifelse(CheckGrowth$EmpGro < CheckGrowth$Emp0016, "NO", "ok")
-
-#Adjust 2000-50 growth where 2000-16/17 growth is higher
-for(ind in c("Pop", "Emp")) {
-  AdjDF <- NULL
-  chkcol <- paste0("Chk", ind)
-  grocol <- paste0(ind, "Gro")
-  delcol <- paste0(ind, "1650")
-  for(cnty in unique(CheckGrowth[CheckGrowth[[chkcol]] == "NO", "County"])) {
-    checkdf <- subset(CheckGrowth, County == cnty)
-    irow <- which(checkdf[[chkcol]] == "NO")
-    Adj2000_50 <- subset(RGS2000_50, County == cnty)
-    Adj2000_50 <- merge(Adj2000_50, checkdf[, c("County", "RG", delcol)])
-    adjrow <- which(Adj2000_50[[delcol]] < 0) 
-    Adj2000_50$Share <- Adj2000_50[[grocol]] / sum(Adj2000_50[[grocol]])
-    Adj2000_50$Share[adjrow] <- 0
-    Adj2000_50$Share <- Adj2000_50$Share/sum(Adj2000_50$Share) # rescale to 1
-    Adj2000_50$AdjGro <- - sum(checkdf[[delcol]][irow]) * Adj2000_50$Share
-    Adj2000_50$AdjGro[adjrow] <- Adj2000_50[[delcol]][adjrow]
-    AdjDF <- rbind(AdjDF, Adj2000_50)
-  }
-  if(!is.null(AdjDF)) {
-    RGS2000_50 <- merge(RGS2000_50, AdjDF[, c("County", "RG", "AdjGro")], all = TRUE)
-    RGS2000_50[is.na(RGS2000_50$AdjGro), "AdjGro"] <- 0
-    RGS2000_50[[grocol]] <- RGS2000_50[[grocol]] -  RGS2000_50$AdjGro
-    RGS2000_50$AdjGro <- NULL
-  }
-}
+ RGS2016_50 <- sqldf(' select County, RG, RGSPop * Pop as Pop1650, RGSEmp * Emp as Emp1650 
+                     from RGSrg 
+                     join CoGrowth2016_50 using (County)')
+ 
+# #check that RG growth 2000-16 is less than 2000-50, and flag if not
+# RGS2000_16 <- sqldf(' select CityData_pop.County, CityData_pop.RGID as RG, sum(CityData_pop.`2016est`- CityData_pop.`2000est`) as Pop0016, sum(CityData_emp.`2016est`- CityData_emp.`2000est`) as Emp0016
+#                     from CityData_pop join CityData_emp using (CityID)
+#                     group by CityData_pop.County, CityData_pop.RGID')
+# 
+# CheckGrowth <- merge(RGS2000_16, RGS2000_50, by = c("County", "RG"))
+# CheckGrowth$Pop1650 <- CheckGrowth$PopGro - CheckGrowth$Pop0016
+# CheckGrowth$Emp1650 <- CheckGrowth$EmpGro - CheckGrowth$Emp0016
+# CheckGrowth$ChkPop <- ifelse(CheckGrowth$PopGro < CheckGrowth$Pop0016, "NO", "ok")
+# CheckGrowth$ChkEmp <- ifelse(CheckGrowth$EmpGro < CheckGrowth$Emp0016, "NO", "ok")
+# 
+# #Adjust 2000-50 growth where 2000-16/17 growth is higher
+# for(ind in c("Pop", "Emp")) {
+#   AdjDF <- NULL
+#   chkcol <- paste0("Chk", ind)
+#   grocol <- paste0(ind, "Gro")
+#   delcol <- paste0(ind, "1650")
+#   for(cnty in unique(CheckGrowth[CheckGrowth[[chkcol]] == "NO", "County"])) {
+#     checkdf <- subset(CheckGrowth, County == cnty)
+#     irow <- which(checkdf[[chkcol]] == "NO")
+#     Adj2000_50 <- subset(RGS2000_50, County == cnty)
+#     Adj2000_50 <- merge(Adj2000_50, checkdf[, c("County", "RG", delcol)])
+#     adjrow <- which(Adj2000_50[[delcol]] < 0) 
+#     Adj2000_50$Share <- Adj2000_50[[grocol]] / sum(Adj2000_50[[grocol]])
+#     Adj2000_50$Share[adjrow] <- 0
+#     Adj2000_50$Share <- Adj2000_50$Share/sum(Adj2000_50$Share) # rescale to 1
+#     Adj2000_50$AdjGro <- - sum(checkdf[[delcol]][irow]) * Adj2000_50$Share
+#     Adj2000_50$AdjGro[adjrow] <- Adj2000_50[[delcol]][adjrow]
+#     AdjDF <- rbind(AdjDF, Adj2000_50)
+#   }
+#   if(!is.null(AdjDF)) {
+#     RGS2000_50 <- merge(RGS2000_50, AdjDF[, c("County", "RG", "AdjGro")], all = TRUE)
+#     RGS2000_50[is.na(RGS2000_50$AdjGro), "AdjGro"] <- 0
+#     RGS2000_50[[grocol]] <- RGS2000_50[[grocol]] -  RGS2000_50$AdjGro
+#     RGS2000_50$AdjGro <- NULL
+#   }
+# }
 
 #Subtract out 2000-16/17 growth 
-RGS2016_50 <- sqldf(' select RGS2000_50.County, RGS2000_50.RG, (PopGro - Pop0016) as Pop1650, (EmpGro - Emp0016) as Emp1650 from RGS2000_50
-                    join RGS2000_16 using (County, RG)')
+#RGS2016_50 <- sqldf(' select RGS2000_50.County, RGS2000_50.RG, (PopGro - Pop0016) as Pop1650, (EmpGro - Emp0016) as Emp1650 from RGS2000_50
+#                    join RGS2000_16 using (County, RG)')
 
 #create job target Ratios
 CityData_emp$CoRGid <- paste(CityData_emp$County, CityData_emp$RGID, sep = '_')
 RGTargetTots <- sqldf(' select County, RGID, sum(Target + Annex + CR_add) as RGTarget 
                       from CityData_emp group by County, RGID')
 RGTargetTots$CoRGid <- paste(RGTargetTots$County, RGTargetTots$RGID, sep = '_')
-CityData_emp$RG_Target <- (CityData_emp$Target + CityData_emp$Annex + CityData_emp$CR_add)/sqldf(' select RGTarget from RGTargetTots join CityData_emp using (CoRGid)')
+CityData_emp$RG_Target <- (CityData_emp$Target + CityData_emp$Annex + CityData_emp$CR_add)/sqldf(' select RGTarget from CityData_emp join RGTargetTots using (CoRGid)')
 colnames(CityData_emp[,11]) <- "RG_Target"
 
 #create pop target Ratios
@@ -106,7 +112,7 @@ CityData_pop$CoRGid <- paste(CityData_pop$County, CityData_pop$RGID, sep = '_')
 RGTargetTotsPOP <- sqldf(paste(' select County, RGID, sum(Target + Annex) as RGTarget 
                       from CityData_pop group by County, RGID'))
 RGTargetTotsPOP$CoRGid <- paste(RGTargetTotsPOP$County, RGTargetTotsPOP$RGID, sep = '_')
-CityData_pop$RG_Target <- (CityData_pop$Target + CityData_pop$Annex)/sqldf(' select RGTarget from RGTargetTotsPOP join CityData_pop using (CoRGid)')
+CityData_pop$RG_Target <- (CityData_pop$Target + CityData_pop$Annex)/sqldf(' select RGTarget from CityData_pop join RGTargetTotsPOP using (CoRGid)')
 colnames(CityData_pop[,10]) <- "RG_Target"
 
 #Apply Target_RG ratios to 2017-50 RG totals
@@ -181,7 +187,7 @@ City1650groHH$HH0050 <- City1650groHH$HH2050 - City1650groHH$HH2000
 CityRGSEmp <- sqldf('select City1650groEmp.RGID, City1650groEmp.County, City1650groEmp.CityID, Juris, `2000est` as Emp2000, Emp2016 ,Empgro1650, Emp2050 
                     from City1650groEmp 
                     join CityXwalk using (CityID)')
-CityRGSPop <- sqldf('select City1650groPop.RGID, City1650groPop.County, City1650groPop.CityID, Juris, Pop2000, Pop2016, Popgro1650, Pop2050, HHPop00, HHPop16, HHPopGro1650, HHPop2050 
+CityRGSPop <- sqldf('select City1650groPop.RGID, City1650groPop.County, City1650groPop.CityID, Juris, Pop2000, Pop2016, Popgro1650, Pop2050, HHPop00, HHPop16 as HHPop2016, HHPopGro1650, HHPop2050 
                     from City1650groPop 
                     join CityXwalk using (CityID)')
 CityRGSHH <- sqldf('select City1650groHH.RGID, City1650groHH.County, City1650groHH.CityID, Juris, HH2000, HH2016, HHgro1650, HH2050 
@@ -190,7 +196,7 @@ CityRGSHH <- sqldf('select City1650groHH.RGID, City1650groHH.County, City1650gro
 
 
 #Sum RGS
-RGS50 <- sqldf(' select CityRGSPop.County, CityRGSPop.RGID, sum(Pop2050 - Pop2000) as Pop0050, sum("Pop2050") as Pop50, sum(HH2050 - HH2000) as HH0050, sum(HH2050) as HH50, sum(Emp2050 - Emp2000) as Emp0050, sum("Emp2050") as Emp50 
+RGS50 <- sqldf(' select CityRGSPop.County, CityRGSPop.RGID, sum(Pop2050 - Pop2000) as Pop0050, sum(Pop2050 - Pop2016) as Pop1650, sum("Pop2050") as Pop50, sum(HH2050 - HH2000) as HH0050, sum(HH2050 - HH2016) as HH1650, sum(HH2050) as HH50, sum(Emp2050 - Emp2000) as Emp0050, sum(Emp2050 - Emp2016) as Emp1650, sum("Emp2050") as Emp50 
                from CityRGSPop 
                join CityRGSEmp using (CityID) join CityRGSHH using (CityID) 
                group by CityRGSPop.County, CityRGSPop.RGID ')
@@ -208,7 +214,7 @@ write.xlsx(output, output.file.name, colNames = TRUE)
   
 # Interpolate (this could go into a separate R script)
 source("interpolate.R")
-to.interpolate <- list(HH = CityRGSHH, Emp = CityRGSEmp)
+to.interpolate <- list(HHPop = CityRGSPop, HH = CityRGSHH, Emp = CityRGSEmp)
 CTs <- list()
 for (indicator in names(to.interpolate)) 
     CTs[[indicator]] <- interpolate.controls(to.interpolate[[indicator]], indicator)
