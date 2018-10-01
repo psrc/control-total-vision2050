@@ -208,17 +208,33 @@ colnames(CityRGSEmp)[which(colnames(CityRGSEmp) == "RGID")] <- RGcol
 colnames(RGS50)[which(colnames(RGS50) == "RGID")] <- RGcol
 
 #Export outta here
-output <- list("RGS2050" = RGS50, "CityPop0050" = CityRGSPop, "CityHH0050" = CityRGSHH,  "CityEmp0050" = CityRGSEmp)
-write.xlsx(output, output.file.name, colNames = TRUE)
-# write.xlsx(output, "Y:/VISION 2050/Data/2050_RGS/STC_final/RGS2050_STC_modInput.xlsx", colNames = TRUE)
-  
+if(!is.null(output.file.name)) {
+  output <- list("RGS2050" = RGS50, "CityPop0050" = CityRGSPop, "CityHH0050" = CityRGSHH,  "CityEmp0050" = CityRGSEmp)
+  write.xlsx(output, output.file.name, colNames = TRUE)
+  # write.xlsx(output, "Y:/VISION 2050/Data/2050_RGS/STC_final/RGS2050_STC_modInput.xlsx", colNames = TRUE)
+}
+
 # Interpolate (this could go into a separate R script)
 source("interpolate.R")
+if(!is.null(REFCTtable.name)) {
+  # read regional totals for adjustments
+  regtot <- read.csv(file.path(data.dir, REFCTtable.name), header = TRUE)
+  #regtot <- data.frame(Year = c(2000, 2017, seq(2020, 2050, by = 5)), 
+  #                     HHPop = seq(3200000, 5720000, length = 9), HH = seq(1282774, 2419949, length = 9))
+  rt.years <- regtot[, "Year"]
+  rownames(regtot) <- rt.years
+  regtot$Year <- NULL
+} else regtot <- NULL
+
 to.interpolate <- list(HHPop = CityRGSPop, HH = CityRGSHH, Emp = CityRGSEmp)
 CTs <- list()
-for (indicator in names(to.interpolate)) 
-    CTs[[indicator]] <- interpolate.controls(to.interpolate[[indicator]], indicator)
+for (indicator in names(to.interpolate)) {
+    RCT <- if(is.null(regtot)) NULL else regtot[, indicator]
+    names(RCT) <- rownames(regtot)
+    CTs[[indicator]] <- interpolate.controls(to.interpolate[[indicator]], indicator, totals = RCT)
+}
 
-write.xlsx(CTs, ct.output.file.name, colNames = TRUE)
+if(!is.null(ct.output.file.name)) 
+  write.xlsx(CTs, ct.output.file.name, colNames = TRUE)
 
   
