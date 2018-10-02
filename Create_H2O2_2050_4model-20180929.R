@@ -16,7 +16,7 @@ RGcols <- list(RGexist = "RGID_Existing", RGprop = "RGID_Proposed")
 # name of the input file
 REFtable.name <- paste0('TablesFor', scenario, 'RGS-20180929.xlsx')
 
-source("hanas_paths.R") # for running on Hana's Mac; normally comment out
+#source("hanas_paths.R") # for running on Hana's Mac; normally comment out
 setwd(script.dir)
 
 for(whichRGcol in names(RGcols)) {

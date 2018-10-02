@@ -23,7 +23,7 @@ output.file.name <- paste0("RGS2050_", scenario, "_modInput-", Sys.Date(), ".xls
 # name of the output file with the interpolated control totals
 ct.output.file.name <- paste0("Control-Totals-", scenario, "-", Sys.Date(), ".xlsx")
 
-source("hanas_paths.R") # for running on Hana's Mac; normally comment out
+#source("hanas_paths.R") # for running on Hana's Mac; normally comment out
 
 setwd(script.dir)
 source("Create_2050_4model.R")
