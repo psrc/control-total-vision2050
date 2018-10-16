@@ -1,6 +1,6 @@
 interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 2050, 
                                  years.to.fit = c(2016, seq(2020, 2050, by = 5)), 
-                                 id.col = "CityID", totals = NULL) {
+                                 id.col = "CityID", totals = NULL, round.to.int = TRUE) {
     # The function interpolates for each geography between the start year and the end year.
     # "indicator" should be the prefix used in the column names, e.g. "Pop", "HHPop".
     # The data frame "df" should have columns composed of the indicator and start year,
@@ -18,7 +18,7 @@ interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 20
         start.value <- sum(df[[start.col]][idx])
         end.value <- sum(df[[end.col]][idx])
         fit <- approx(c(start.year, end.year), c(start.value, end.value), xout = years.to.fit)
-        result <- rbind(result, round(fit$y))
+        result <- rbind(result, fit$y)
     }
     if(!is.null(totals)) { # adjust to totals
         difs <- result[, 2:ncol(result)] - result[, 1:(ncol(result)-1)]
@@ -26,9 +26,11 @@ interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 20
             tot.dif <- totals[as.character(years.to.fit[i])] - sum(result[,i])
             if(tot.dif == 0) next
             shares <- difs[, i-1]/sum(difs[, i-1])
-            result[,i] <- round(pmax(0, result[,i] + shares * tot.dif))
+            result[,i] <- pmax(0, result[,i] + shares * tot.dif)
         }
     }
+    if(round.to.int)
+      result <- round(result)
     result <- cbind(geo.ids, result)
     colnames(result) <- c(id.col, years.to.fit)
     return(result)

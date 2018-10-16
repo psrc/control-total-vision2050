@@ -1,5 +1,5 @@
 # Which scenario is this
-scenario <- "H2O2"
+scenario <- "H2O2-jobs-adj"
 
 # Where is this script
 script.dir <- 'J:/Projects/V2050/STC_RGS/Script'
@@ -14,7 +14,7 @@ juris.dir <- "J:/Projects/V2050/SEIS/Data_Support/script_input"
 RGcols <- list(RGexist = "RGID_Existing", RGprop = "RGID_Proposed")
 
 # name of the input file
-REFtable.name <- paste0('TablesFor', scenario, 'RGS-20180929.xlsx')
+REFtable.name <- paste0('TablesFor', scenario, '-RGS-20181004.xlsx')
 # name of the file with regional controls with intermediate years
 REFCTtable.name <- 'REF-Regional-Controls.csv'
 
