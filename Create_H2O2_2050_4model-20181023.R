@@ -13,8 +13,11 @@ juris.dir <- "J:/Projects/V2050/SEIS/Data_Support/script_input"
 # Which RG col to use
 RGcols <- list(RGexist = "RGID_Existing", RGprop = "RGID_Proposed")
 
+# Should interpolated numbers be rounded
+round.interpolated <- FALSE
+
 # name of the input file
-REFtable.name <- paste0('TablesFor', scenario, 'RGS-20180929.xlsx')
+REFtable.name <- paste0('TablesFor', scenario, 'RGS-20181023.xlsx')
 # name of the file with regional controls with intermediate years
 REFCTtable.name <- 'REF-Regional-Controls.csv'
 

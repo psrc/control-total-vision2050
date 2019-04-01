@@ -1,5 +1,5 @@
 # Which scenario is this
-scenario <- "TOD"
+scenario <- "STC"
 
 # Where is this script
 script.dir <- 'J:/Projects/V2050/STC_RGS/Script'
@@ -11,15 +11,18 @@ data.dir <- script.dir
 juris.dir <- "J:/Projects/V2050/SEIS/Data_Support/script_input"
 
 # Which RG col to use
-RGcol <- "RGID_Proposed" #"RGID_Existing" 
+RGcol <- "RGID_Existing" #"RGID_Proposed"
+
+# Should interpolated numbers be rounded
+round.interpolated <- FALSE
 
 # name of the input file
-REFtable.name <- paste0('TablesFor', scenario, 'RGS-20181002.xlsx')
+REFtable.name <- paste0('TablesFor', scenario, 'RGS-20181023.xlsx')
 # name of the file with regional controls with intermediate years
 REFCTtable.name <- 'REF-Regional-Controls.csv'
 
 # name of the output file
-output.file.name <- paste0("RGS2050_", scenario, "_modInput-", Sys.Date(), ".xlsx") 
+output.file.name <- paste0("RGS2050_", scenario, "_modInput-", Sys.Date(), ".xlsx")
 # name of the output file with the interpolated control totals
 ct.output.file.name <- paste0("Control-Totals-", scenario, "-", Sys.Date(), ".xlsx")
 

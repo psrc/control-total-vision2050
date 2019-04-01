@@ -101,26 +101,18 @@ CoGrowth2016_50$Emp <- REFdelta["2016-50", "Emp"]*RGSCo$RGSEmp
 
 #create job target Ratios
 CityData_emp$CoRGid <- paste(CityData_emp$County, CityData_emp$RGID, sep = '_')
-# removed Annex
-#RGTargetTots <- sqldf(' select County, RGID, sum(Target + Annex + CR_add) as RGTarget 
-#                      from CityData_emp group by County, RGID')
-RGTargetTots <- sqldf(' select County, RGID, sum(Target + CR_add) as RGTarget 
+RGTargetTots <- sqldf(' select County, RGID, sum(Target + Annex + CR_add) as RGTarget 
                       from CityData_emp group by County, RGID')
 RGTargetTots$CoRGid <- paste(RGTargetTots$County, RGTargetTots$RGID, sep = '_')
-#CityData_emp$RG_Target <- (CityData_emp$Target + CityData_emp$Annex + CityData_emp$CR_add)/sqldf(' select RGTarget from CityData_emp join RGTargetTots using (CoRGid)')
-CityData_emp$RG_Target <- (CityData_emp$Target + CityData_emp$CR_add)/sqldf(' select RGTarget from CityData_emp join RGTargetTots using (CoRGid)')
+CityData_emp$RG_Target <- (CityData_emp$Target + CityData_emp$Annex + CityData_emp$CR_add)/sqldf(' select RGTarget from CityData_emp join RGTargetTots using (CoRGid)')
 colnames(CityData_emp[,11]) <- "RG_Target"
 
 #create pop target Ratios
 CityData_pop$CoRGid <- paste(CityData_pop$County, CityData_pop$RGID, sep = '_')
-# removed Annex
-#RGTargetTotsPOP <- sqldf(paste(' select County, RGID, sum(Target + Annex) as RGTarget 
-#                      from CityData_pop group by County, RGID'))
-RGTargetTotsPOP <- sqldf(paste(' select County, RGID, sum(Target) as RGTarget 
+RGTargetTotsPOP <- sqldf(paste(' select County, RGID, sum(Target + Annex) as RGTarget 
                       from CityData_pop group by County, RGID'))
 RGTargetTotsPOP$CoRGid <- paste(RGTargetTotsPOP$County, RGTargetTotsPOP$RGID, sep = '_')
-#CityData_pop$RG_Target <- (CityData_pop$Target + CityData_pop$Annex)/sqldf(' select RGTarget from CityData_pop join RGTargetTotsPOP using (CoRGid)')
-CityData_pop$RG_Target <- CityData_pop$Target/sqldf(' select RGTarget from CityData_pop join RGTargetTotsPOP using (CoRGid)')
+CityData_pop$RG_Target <- (CityData_pop$Target + CityData_pop$Annex)/sqldf(' select RGTarget from CityData_pop join RGTargetTotsPOP using (CoRGid)')
 colnames(CityData_pop[,10]) <- "RG_Target"
 
 #Apply Target_RG ratios to 2017-50 RG totals
@@ -236,12 +228,10 @@ if(!is.null(REFCTtable.name)) {
 
 to.interpolate <- list(HHPop = CityRGSPop, HH = CityRGSHH, Emp = CityRGSEmp)
 CTs <- list()
-round.to.int <- if(exists("round.interpolated")) round.interpolated else TRUE
 for (indicator in names(to.interpolate)) {
     RCT <- if(is.null(regtot)) NULL else regtot[, indicator]
     names(RCT) <- rownames(regtot)
-    CTs[[indicator]] <- interpolate.controls(to.interpolate[[indicator]], indicator, totals = RCT, 
-                                             round.to.int = round.to.int)
+    CTs[[indicator]] <- interpolate.controls(to.interpolate[[indicator]], indicator, totals = RCT)
 }
 
 if(!is.null(ct.output.file.name)) 

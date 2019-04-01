@@ -1,6 +1,11 @@
 interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 2050, 
                                  years.to.fit = c(2016, seq(2020, 2050, by = 5)), 
-                                 id.col = "CityID", totals = NULL, round.to.int = TRUE) {
+                                 id.col = "CityID", totals = NULL) {
+  
+# interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 2050, 
+#                                  years.to.fit = c(2016, seq(2020, 2050, by = 5)), 
+#                                  id.col = "CityID", totals = NULL, round.to.int = TRUE) {
+  
     # The function interpolates for each geography between the start year and the end year.
     # "indicator" should be the prefix used in the column names, e.g. "Pop", "HHPop".
     # The data frame "df" should have columns composed of the indicator and start year,
@@ -29,9 +34,15 @@ interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 20
             result[,i] <- pmax(0, result[,i] + shares * tot.dif)
         }
     }
-    if(round.to.int)
+    if(round.interpolated)
       result <- round(result)
     result <- cbind(geo.ids, result)
     colnames(result) <- c(id.col, years.to.fit)
     return(result)
+    
+    # if(round.to.int)
+    #   result <- round(result)
+    # result <- cbind(geo.ids, result)
+    # colnames(result) <- c(id.col, years.to.fit)
+    # return(result)
 }
