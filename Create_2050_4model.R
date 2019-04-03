@@ -228,12 +228,17 @@ if(!is.null(REFCTtable.name)) {
 
 to.interpolate <- list(HHPop = CityRGSPop, HH = CityRGSHH, Emp = CityRGSEmp)
 CTs <- list()
+unrolled <- NULL
 for (indicator in names(to.interpolate)) {
     RCT <- if(is.null(regtot)) NULL else regtot[, indicator]
     names(RCT) <- rownames(regtot)
     CTs[[indicator]] <- interpolate.controls(to.interpolate[[indicator]], indicator, totals = RCT)
+    this.unrolled <- unroll(CTs[[indicator]], indicator, totals = RCT)
+    unrolled <- if(is.null(unrolled)) this.unrolled else merge(unrolled, this.unrolled)
 }
 
+CTs[["unrolled"]] <- unrolled
+  
 if(!is.null(ct.output.file.name)) 
   write.xlsx(CTs, ct.output.file.name, colNames = TRUE)
 

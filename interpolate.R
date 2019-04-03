@@ -1,3 +1,5 @@
+library(data.table)
+
 interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 2050, 
                                  years.to.fit = c(2016, seq(2020, 2050, by = 5)), 
                                  id.col = "CityID", totals = NULL) {
@@ -45,4 +47,28 @@ interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 20
     # result <- cbind(geo.ids, result)
     # colnames(result) <- c(id.col, years.to.fit)
     # return(result)
+}
+
+unroll <- function(ct, indicator, totals = NULL, new.id.col = "city_id") {
+    wide <- data.table(ct)
+    setnames(wide, "2016", "2017") # rename column 2016 to 2017 
+    long <- melt(wide, id.vars = colnames(wide)[1], variable.name = "year")
+    colnames(long)[1] <- new.id.col
+    long[, value := round(value)] # round
+    if(!is.null(totals)) {
+      # match to given totals (differences caused by rounding) 
+      difs <- merge(long[, .(ct = sum(value)), by = year], 
+                    data.table(year = names(totals), should_be = totals), by = "year")
+      difs[, dif := should_be - ct]
+      # distribute the difs proportianlly
+      for (y in difs$year) {
+        d <- difs[year == y, dif]
+        slng <- long[year == y]
+        sampl.jurs <- sample(slng[[new.id.col]], abs(d), prob = slng$value)
+        idx <- long$year == y & long[[new.id.col]] %in% sampl.jurs
+        long[idx, value := value + sign(d)] # subtracts if d is negative, otherwise adds
+      }
+    }
+    setnames(long, "value", paste0("total_", tolower(indicator)))
+    return(long)
 }
