@@ -65,7 +65,7 @@ unroll <- function(ct, indicator, totals = NULL, new.id.col = "city_id") {
         d <- difs[year == y, dif]
         slng <- long[year == y]
         sampl.jurs <- sample(slng[[new.id.col]], abs(d), prob = slng$value)
-        idx <- long$year == y & long[[new.id.col]] %in% sampl.jurs
+        idx <- which(long$year == y & long[[new.id.col]] %in% sampl.jurs)
         long[idx, value := value + sign(d)] # subtracts if d is negative, otherwise adds
       }
     }
