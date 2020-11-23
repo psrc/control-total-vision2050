@@ -20,7 +20,7 @@ RGcol <- "RGID_Proposed" #"RGID_Existing"
 round.interpolated <- FALSE
 
 # name of the input file
-REFtable.name <- paste0('TablesFor', scenario, '-20201110.xlsx')
+REFtable.name <- paste0('TablesFor', scenario, '-20201117.xlsx')
 # name of the file with regional controls with intermediate years
 REFCTtable.name <- 'REF-Regional-Controls.csv'
 
