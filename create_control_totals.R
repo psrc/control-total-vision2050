@@ -8,9 +8,9 @@ RGSrg <- data.table(read.xlsx(file.path(data.dir, REFtable.name), sheet = 'RGSrg
 RGSCo <- data.table(read.xlsx(file.path(data.dir, REFtable.name), sheet = 'RGScounty'))
 setnames(RGSrg, "RG", "RGID")
 
-CityXwalk <- fread(file.path(juris.dir, 'Juris_Reporting_PA-v5.csv'), header = TRUE)
-CityData_emp <- data.table(read.xlsx(file.path(data.dir, 'CityDataEmp_RGS_final.xlsx'), sheet = 'CityDataEmp'))
-CityData_pop <- data.table(read.xlsx(file.path(data.dir, 'CityDataPop_RGS_final.xlsx'), sheet = 'CityDataPop'))
+CityXwalk <- fread(file.path(juris.dir, juris.reporting.name), header = TRUE)
+CityData_emp <- data.table(read.xlsx(file.path(data.dir, juris.data.emp.name), sheet = 'CityDataEmp'))
+CityData_pop <- data.table(read.xlsx(file.path(data.dir, juris.data.pop.name), sheet = 'CityDataPop'))
 
 # Merge CityData_emp & CityData_pop with the Juris_Reporting dataset,
 # => the original RGID column in the pop and emp datasets is removed

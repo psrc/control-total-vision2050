@@ -1,7 +1,7 @@
 library(data.table)
 
 interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 2050, 
-                                 years.to.fit = c(2016, seq(2020, 2050, by = 5)), 
+                                 years.to.fit = c(start.year, seq(2020, end.year, by = 5)), 
                                  id.col = "CityID", totals = NULL) {
   
 # interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 2050, 
@@ -51,7 +51,7 @@ interpolate.controls <- function(df, indicator, start.year = 2016, end.year = 20
 
 unroll <- function(ct, indicator, totals = NULL, new.id.col = "city_id") {
     wide <- data.table(ct)
-    setnames(wide, "2016", "2017") # rename column 2016 to 2017 
+    setnames(wide, "2016", "2017", skip_absent=TRUE) # rename column 2016 to 2017 
     long <- melt(wide, id.vars = colnames(wide)[1], variable.name = "year")
     colnames(long)[1] <- new.id.col
     long[, value := round(value)] # round
