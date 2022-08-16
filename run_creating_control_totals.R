@@ -1,7 +1,9 @@
 # Which scenario is this
 scenario <- "PA-Final"
 scenario <- "GenTestU"
+scenario <- "Utargets18v2"
 scenario <- "Utargets18"
+scenario <- "Utargets18luv3"
 
 # Where is this script
 script.dir <- 'J:/Projects/V2050/STC_RGS/Script'
@@ -43,7 +45,7 @@ output.file.name <- paste0("RGS2050_", scenario, "_modInput-", Sys.Date(), ".xls
 # name of the output file with the interpolated control totals
 ct.output.file.name <- paste0("Control-Totals-", scenario, "-", Sys.Date(), ".xlsx")
 
-#source("hanas_paths.R") # for running on Hana's Mac; normally comment out
+source("hanas_paths.R") # for running on Hana's Mac; normally comment out
 
 setwd(script.dir)
-source("create_control_totals.R")
+source("create_control_totals_luv3_rebased_targets.R")
