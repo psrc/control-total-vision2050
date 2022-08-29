@@ -131,6 +131,25 @@ for (indicator in names(to.interpolate)) {
 
 CTs[["unrolled"]] <- unrolled
 
+# interpolate all years and aggregate to regional totals
+years.to.fit <- ankers[1]:2050 
+unrolled.all <- NULL
+
+for (indicator in names(to.interpolate)) {
+    RCT <- if(is.null(regtot)) NULL else regtot[, indicator]
+    names(RCT) <- rownames(regtot)
+    ct.all <- interpolate.controls.with.ankers(to.interpolate[[indicator]][order(control_id)], indicator, 
+                                                         anker.years = ankers, years.to.fit = years.to.fit,
+                                                         totals = RCT)
+    this.unrolled <- unroll(ct.all, indicator, totals = RCT, new.id.col = "subreg_id")
+    unrolled.all <- if(is.null(unrolled.all)) this.unrolled else merge(unrolled.all, this.unrolled, all = TRUE)
+}
+# aggregate
+cols <- setdiff(colnames(unrolled.all), c("year", "subreg_id"))
+unrolled.reg <- unrolled.all[, lapply(.SD, sum), by = .(year), .SDcols = cols] 
+
+CTs[["unrolled_regional"]] <- unrolled.reg
+
 if(!is.null(ct.output.file.name)) 
     write.xlsx(CTs, ct.output.file.name, colNames = TRUE)
 
