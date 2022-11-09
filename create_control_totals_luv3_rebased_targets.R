@@ -1,55 +1,36 @@
-# Creates a dataset with jurisdictional control totals
-# Base year and target year can be set.
+# Creates a dataset with jurisdictional control totals.
+# Given input targets, it does the following:
+#  - sets the end year values for HHPop and HH and interpolates to intermediate years
+#  - unrolls the totals into a long format
 # The script should be called from run_creating_control_totals_from_targets.R
 # Hana Sevcikova, PSRC
-# 08/16/2022
+# 11/08/2022
 
 library(data.table)
 library(openxlsx)
 library(tools)
 
-# set various column names
-base.year.short <- substr(as.character(base.year), 3,4)
-target.year.short <- substr(as.character(target.year), 3,4)
-basecol <- paste0(base.year, "est")
-basecol.ref <- paste0(ref.base.year, "BY")
-basecol.hhpop <- paste0("HHPop", base.year.short)
-basecol.hhpop.ref <- paste0(basecol.ref, "hhpop")
-basecol.hh <- paste0("HH", base.year.short)
-basecol.hh.ref <- paste0(basecol.ref, "hh")
-targetcol.pph <- paste0("PPH", target.year.short)
-targetcol.gqpct <- paste0("GQpct", target.year.short)
-targetcol <- paste0(target.year, "trg")
-
 # read city-level target file
 CityData <- if(file_ext(target.file) == "csv") fread(file.path(data.dir, target.file)) else data.table(read.xlsx(file.path(data.dir, target.file), 
                                                                                             sheet = target.sheet, startRow = 1))
 
-# select columns needed
-CityData_pop <- CityData[, .(control_id, county_id, RGID, BaseEst = TotPop20, Target = TotPopTrg,
-                             EndTrg = TotPop50, HHPopBase = HHpop20, HHBase = HH20, 
-                             FirstPop = Pop18, FirstHH = HH18, FirstHHpop = HHpop18, 
-                             GQpct = GQpct20, EndGQpct = GQpct50, EndPPH = PPH50)]
-
-CityData_emp <- CityData[, .(control_id, county_id, RGID, BaseEst = TotEmp20_wCRnoMil, Target = TotEmpTrg_wCRnoMil,
-                             EndTrg = TotEmp50_wCRnoMil, FirstEmp = Emp18)]
-
-# renaming again to be consistent with previous implementations
-CityGroEmp <- CityData_emp[, .(county_id, RGID, control_id, EmpBY = FirstEmp, EmpBase = BaseEst,
-                             EmpGro = Target, EmpTarget = EndTrg)]
-CityGroPop <- CityData_pop[, .(county_id, RGID, control_id, 
-                                      PopBY = FirstPop, PopBase = BaseEst,
-                                      HHPopBY = FirstHHpop, HHPopBase,
-                                      HHBY = FirstHH, HHBase,
-                                      PopGro = Target, PopTarget = EndTrg, 
-                                      GQpctTarget = EndGQpct, PPHTarget = EndPPH
+# select columns needed (make sure the column names are correctly aligned with the BY and target names)
+CityGroEmp <- CityData[, .(county_id, RGID, control_id, EmpBY = Emp18, EmpBase = TotEmp20_wCRnoMil,
+                             EmpGro = TotEmpTrg_wCRnoMil, EmpTarget = TotEmp50_wCRnoMil)]
+CityGroPop <- CityData[, .(county_id, RGID, control_id, 
+                                      PopBY = Pop18, PopBase = TotPop20,
+                                      HHPopBY =  HHpop18, HHPopBase = HHpop20,
+                                      HHBY = HH18, HHBase = HH20,
+                                      PopGro = TotPopTrg, PopTarget = TotPop50, 
+                                      GQpctTarget = GQpct50, PPHTarget = PPH50
                                     )] 
 
+# compute end points for HHPop and HH
 CityGroPop[, HHPopTarget := PopTarget - PopTarget * GQpctTarget/100]
 CityGroPop[, HHTarget := HHPopTarget/PPHTarget]
 CityGroPop[is.na(HHTarget), HHTarget := 0]
 
-# add HH growth column
+# add HH ad HHPop growth column
 CityGroPop[, HHGro := HHTarget - HHBase]
 CityGroPop[, HHPopGro := HHPopTarget - HHPopBase]
 
@@ -57,8 +38,7 @@ CityGroPop[, HHPopGro := HHPopTarget - HHPopBase]
 CityGroEmp[CityData, Juris := i.name, on = "control_id"]
 CityGroPop[CityData, Juris := i.name, on = "control_id"]
 
-
-#Sum RGS
+#Sum over RGs
 RGSTarget <- merge(CityGroPop[, .(PopDelta = sum(PopTarget - PopBase), PopTarget = sum(PopTarget), 
                                 HHDelta = sum(HHTarget - HHBase), HHTarget = sum(HHTarget)), by = .(county_id, RGID)], 
                CityGroEmp[, .(EmpDelta = sum(EmpTarget - EmpBase), EmpTarget = sum(EmpTarget)), by = .(county_id, RGID)], 
@@ -70,6 +50,7 @@ CityRGSPop <- CityGroPop[, .(RGID, county_id, control_id, Juris, PopBY, PopBase,
 CityRGSHH <- CityGroPop[, .(RGID, county_id, control_id, Juris, HHBY, HHBase, HHGro, HHTarget)]
 
 # Rename time columns
+target.year.short <- substr(as.character(target.year), 3,4)
 growth.suffix <- paste0(substr(as.character(base.year), 3,4), target.year.short)
 
 setnames(CityRGSPop, c("PopBY", "PopBase", "PopGro", "PopTarget", "HHPopBY", "HHPopBase", "HHPopGro", "HHPopTarget"),

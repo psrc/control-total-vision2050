@@ -3,12 +3,13 @@ script.dir <- '/Users/hana/psrc/R/control-total-vision2050' # for Hana' psrc mac
 data.dir <- file.path(script.dir, "data")
 
 #rgs.target.file <- "~/psrc/control_totals/ConTot\ R\ Script\ Inputs\ 071222.xlsx"
-target.file <- "../../../control_totals/ConTot080122.xlsx" # relative path to data.dir
+#target.file <- "../../../control_totals/ConTot080122.xlsx" # relative path to data.dir
 #target.file <- "../../../control_totals/control_id_working_080122.csv" # numeric columns have to be stored without quotes, otherwise it doesn't work
+target.file <- "../../../control_totals/control_id_working_110722.xlsx"
 
 #REFtable.name <- paste0('TablesFor', "UtargetsLuv3", '.xlsx')
-REFCTtable.name <- 'REF-Regional-Controls18.csv'
-REFCTtable.name <- '2018_PSRC_Macroeconomic_Forecast_rev.xlsx'
+#REFCTtable.name <- 'REF-Regional-Controls18.csv'
+#REFCTtable.name <- '2018_PSRC_Macroeconomic_Forecast_rev.xlsx'
 #REFCTtable.name <- NULL # use this if no scaling is desired
 
 #juris.data.emp.name <- paste0('CityDataEmp_', scenario, '.xlsx')
